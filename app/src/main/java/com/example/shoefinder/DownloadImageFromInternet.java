@@ -10,7 +10,7 @@ import java.io.InputStream;
 import java.net.URL;
 
 public class DownloadImageFromInternet extends AsyncTask<String, Void, Bitmap> {
-    ImageView _imageView;
+    private final ImageView _imageView;
 
     public DownloadImageFromInternet(ImageView imageView) {
         _imageView = imageView;
