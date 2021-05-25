@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Editable;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -13,7 +12,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,19 +30,14 @@ public class MainActivity extends AppCompatActivity {
 
         Button searchButton = findViewById(R.id.searchButton);
         EditText editText = findViewById(R.id.editTextNumber);
+        TextView textView = findViewById(R.id.descriptionTextView);
+        ImageView imageView = findViewById(R.id.imageView);
+        ImageView logoView = findViewById(R.id.logoView);
 
         searchButton.setOnClickListener(x -> {
-            Editable textID = editText.getText();
-            if (textID.length() == 0) {
-                printHint("Please enter the item number.");
-            } else {
-                new GetImageURLFromInternet().execute(textID.toString());
-            }
+            String articleID = editText.getText().toString();
+            new GetImageURLFromInternet(textView, imageView, logoView).execute(articleID);
         });
-    }
-
-    private void printHint(String s) {
-        Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
     }
 
     private class DownloadImageFromInternet extends AsyncTask<String, Void, Bitmap> {
@@ -52,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
 
         public DownloadImageFromInternet(ImageView imageView) {
             _imageView = imageView;
-            printHint("Please wait, it may take a few minute...");
+            Toast.makeText(getApplicationContext(), "Please wait, it may take a few minute...", Toast.LENGTH_SHORT).show();
         }
 
         protected Bitmap doInBackground(String... urls) {
@@ -68,28 +61,34 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(Bitmap result) {
-            if (result == null) {
-                printHint("Could not download image.");
-            } else {
                 _imageView.setImageBitmap(result);
-            }
-
         }
     }
 
     private class GetImageURLFromInternet extends AsyncTask<String, Void, Document> {
 
-        private static final int STATUS_OK = 200;
+        private static final int DESCRIPTION_ENDING_LENGTH = 20;
+        private static final int DESCRIPTION_BEGINNING = 0;
+        private static final String SRC = "src";
+        private static final String BRANDLOGO = "brandlogo";
+        private static final String EMPTY_STRING = "";
+        private static final String PRODUCT_IMG = "product_img";
+        private static final String SCHUHCENTER_DE = "https://www.schuhcenter.de/";
+        private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:5.0) Gecko/20100101 Firefox/5.0";
+
+        private final TextView _textView;
+        private final ImageView _imageView;
+        private final ImageView _logoView;
+
+        private GetImageURLFromInternet(TextView textView, ImageView imageView, ImageView logoView) {
+            _textView = textView;
+            _imageView = imageView;
+            _logoView = logoView;
+        }
 
         protected Document doInBackground(String... urls) {
             try {
-                Response response = Jsoup.connect("https://www.schuhcenter.de/" + urls[0]).ignoreHttpErrors(true).execute();
-                int statusCode = response.statusCode();
-                if (statusCode == STATUS_OK) {
-                    return response.parse();
-                } else {
-                    printHint("Could not find the article corresponding to this number.");
-                }
+                return Jsoup.connect(SCHUHCENTER_DE + urls[0]).userAgent(USER_AGENT).ignoreHttpErrors(true).get();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -97,37 +96,33 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(Document result) {
-            if (result == null) {
-                printHint("Could not parse the website that was requested.");
-            } else {
+            if (result != null) {
                 String imgSrc = getImageSrc(result);
                 String logoSrc = getLogoSrc(result);
 
-                new DownloadImageFromInternet(findViewById(R.id.imageView)).execute(imgSrc);
+                new DownloadImageFromInternet(_imageView).execute(imgSrc);
                 setDescription(result);
-                new DownloadImageFromInternet(findViewById(R.id.logoView)).execute(logoSrc);
+                new DownloadImageFromInternet(_logoView).execute(logoSrc);
             }
         }
 
         private String getImageSrc(Document result) {
-            Element productImg = result.getElementById("product_img");
+            Element productImg = result.getElementById(PRODUCT_IMG);
             if (productImg == null) {
-                printHint("Could not find the image that was requested");
-                return "";
+                return EMPTY_STRING;
             }
-            return productImg.attr("data-cfsrc");
+            return productImg.attr(SRC);
         }
 
         private String getLogoSrc(Document result) {
-            String logoSrc = "";
-            Element brandLogoElementDiv = result.getElementsByClass("brandlogo").first();
+            String logoSrc = EMPTY_STRING;
+            Element brandLogoElementDiv = result.getElementsByClass(BRANDLOGO).first();
             if (brandLogoElementDiv == null) {
-                printHint("Could not find the brand logo that was requested");
                 return logoSrc;
             }
             for (Element e : brandLogoElementDiv.children()) {
-                if (e.hasAttr("data-cfsrc")) {
-                    logoSrc = e.attr("data-cfsrc");
+                if (e.hasAttr(SRC)) {
+                    logoSrc = e.attr(SRC);
                 }
             }
             return logoSrc;
@@ -135,11 +130,11 @@ public class MainActivity extends AppCompatActivity {
 
         private void setDescription(Document result) {
             String title = result.title();
-            title = title.substring(0, title.length() - 20);
-            TextView textView = findViewById(R.id.descriptionTextView);
-            textView.setText(title);
+            int titleLength = title.length();
+            if (titleLength > DESCRIPTION_ENDING_LENGTH) {
+                title = title.substring(DESCRIPTION_BEGINNING, titleLength - DESCRIPTION_ENDING_LENGTH);
+            }
+            _textView.setText(title);
         }
     }
-
-
 }
