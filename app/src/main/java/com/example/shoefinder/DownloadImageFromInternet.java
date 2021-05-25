@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,12 +18,11 @@ public class DownloadImageFromInternet extends AsyncTask<String, Void, Bitmap> {
 
     protected Bitmap doInBackground(String... urls) {
         String imageURL = urls[0];
-        InputStream in;
+        InputStream in = null;
         try {
             in = new URL(imageURL).openStream();
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
         }
         return BitmapFactory.decodeStream(in);
     }

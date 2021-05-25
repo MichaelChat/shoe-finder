@@ -46,8 +46,8 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Docu
             String logoSrc = getLogoSrc(result);
 
             new DownloadImageFromInternet(_imageView).execute(imgSrc);
-            setDescription(result);
             new DownloadImageFromInternet(_logoView).execute(logoSrc);
+            setDescription(result);
         }
     }
 
@@ -60,17 +60,15 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Docu
     }
 
     private String getLogoSrc(Document result) {
-        String logoSrc = EMPTY_STRING;
         Element brandLogoElementDiv = result.getElementsByClass(BRANDLOGO).first();
-        if (brandLogoElementDiv == null) {
-            return logoSrc;
-        }
-        for (Element e : brandLogoElementDiv.children()) {
-            if (e.hasAttr(SRC)) {
-                logoSrc = e.attr(SRC);
+        if (brandLogoElementDiv != null) {
+            for (Element e : brandLogoElementDiv.children()) {
+                if (e.hasAttr(SRC)) {
+                    return e.attr(SRC);
+                }
             }
         }
-        return logoSrc;
+        return EMPTY_STRING;
     }
 
     private void setDescription(Document result) {
