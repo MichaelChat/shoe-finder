@@ -2,7 +2,6 @@ package com.example.shoefinder;
 
 import android.os.Bundle;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Button searchButton = findViewById(R.id.searchButton);
-        EditText editText = findViewById(R.id.editTextNumber);
+        ClearableEditText editText = findViewById(R.id.editTextNumber);
         TextView textView = findViewById(R.id.descriptionTextView);
         ImageView imageView = findViewById(R.id.imageView);
         ImageView logoView = findViewById(R.id.logoView);
