@@ -10,20 +10,24 @@ import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 
-public class DisplayInformationFromInternet extends AsyncTask<String, Void, Document> {
+public class DisplayInformationFromInternet extends AsyncTask<String, Void, Void> {
 
     private static final int DESCRIPTION_ENDING_LENGTH = 20;
     private static final int DESCRIPTION_BEGINNING = 0;
     private static final String SRC = "src";
     private static final String BRANDLOGO = "brandlogo";
-    private static final String EMPTY_STRING = "";
     private static final String PRODUCT_IMG = "product_img";
     private static final String SCHUHCENTER_DE = "https://www.schuhcenter.de/";
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:5.0) Gecko/20100101 Firefox/5.0";
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0";
 
     private final TextView _textView;
     private final ImageView _imageView;
     private final ImageView _logoView;
+
+    private Document _document_complete;
+    private Document _document_shortened;
+    private String _imgSrc;
+    private String _logoSrc = "";
 
     public DisplayInformationFromInternet(TextView textView, ImageView imageView, ImageView logoView) {
         _textView = textView;
@@ -31,44 +35,60 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Docu
         _logoView = logoView;
     }
 
-    protected Document doInBackground(String... urls) {
+    protected Void doInBackground(String... urls) {
         try {
-            return Jsoup.connect(SCHUHCENTER_DE + urls[0]).userAgent(USER_AGENT).ignoreHttpErrors(true).get();
+            String id = urls[0];
+            String url_complete = SCHUHCENTER_DE + id;
+            _document_complete = Jsoup.connect(url_complete).userAgent(USER_AGENT).ignoreHttpErrors(true).get();
+
+            int length = id.length();
+            if (length == 13) {
+                String url_shortened = url_complete.substring(0, url_complete.length() - 2);
+                _document_shortened = Jsoup.connect(url_shortened).userAgent(USER_AGENT).ignoreHttpErrors(true).get();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    protected void onPostExecute(Document result) {
-        if (result != null) {
-            String imgSrc = getImageSrc(result);
-            String logoSrc = getLogoSrc(result);
-
-            new DownloadImageFromInternet(_imageView).execute(imgSrc);
-            new DownloadImageFromInternet(_logoView).execute(logoSrc);
-            setDescription(result);
+    protected void onPostExecute(Void v) {
+        boolean wasSuccessful = exec(_document_complete);
+        if (!wasSuccessful && _document_shortened != null) {
+            exec(_document_shortened);
         }
     }
 
-    private String getImageSrc(Document result) {
+    private boolean exec(Document document) {
+        boolean containsImage = getImageSrc(document);
+        boolean containsLogo = getLogoSrc(document);
+        new DownloadImageFromInternet(_imageView).execute(_imgSrc);
+        new DownloadImageFromInternet(_logoView).execute(_logoSrc);
+        setDescription(document);
+        return containsImage && containsLogo;
+    }
+
+
+    private boolean getImageSrc(Document result) {
         Element productImg = result.getElementById(PRODUCT_IMG);
-        if (productImg == null) {
-            return EMPTY_STRING;
+        if (productImg != null && productImg.hasAttr(SRC)) {
+            _imgSrc = productImg.attr(SRC);
+            return true;
         }
-        return productImg.attr(SRC);
+        return false;
     }
 
-    private String getLogoSrc(Document result) {
+    private boolean getLogoSrc(Document result) {
         Element brandLogoElementDiv = result.getElementsByClass(BRANDLOGO).first();
         if (brandLogoElementDiv != null) {
             for (Element e : brandLogoElementDiv.children()) {
                 if (e.hasAttr(SRC)) {
-                    return e.attr(SRC);
+                    _logoSrc = e.attr(SRC);
+                    return true;
                 }
             }
         }
-        return EMPTY_STRING;
+        return false;
     }
 
     private void setDescription(Document result) {
