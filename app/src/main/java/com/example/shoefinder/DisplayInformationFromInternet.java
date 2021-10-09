@@ -7,6 +7,7 @@ import android.widget.TextView;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 
@@ -19,6 +20,10 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Void
     private static final String PRODUCT_IMG = "product_img";
     private static final String SCHUHCENTER_DE = "https://www.schuhcenter.de/";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0";
+    public static final String ZOOM_0 = "zoom-0";
+    public static final String DATA_SRC = "data-src";
+    public static final String PROPERTY = "property";
+    public static final String META = "meta";
 
     private final TextView _textView;
     private final ImageView _imageView;
@@ -26,7 +31,7 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Void
 
     private Document _document_complete;
     private Document _document_shortened;
-    private String _imgSrc;
+    private String _imgSrc = "";
     private String _logoSrc = "";
 
     public DisplayInformationFromInternet(TextView textView, ImageView imageView, ImageView logoView) {
@@ -70,10 +75,15 @@ public class DisplayInformationFromInternet extends AsyncTask<String, Void, Void
 
 
     private boolean getImageSrc(Document result) {
-        Element productImg = result.getElementById(PRODUCT_IMG);
-        if (productImg != null && productImg.hasAttr(SRC)) {
-            _imgSrc = productImg.attr(SRC);
-            return true;
+        Elements metaTags = result.getElementsByTag(META);
+
+        for (Element metaTag : metaTags) {
+            String property = metaTag.attr(PROPERTY);
+
+            if("og:image".equals(property)) {
+                _imgSrc = metaTag.attr("content");
+                return true;
+            }
         }
         return false;
     }
